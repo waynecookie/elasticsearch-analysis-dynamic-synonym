@@ -1,6 +1,16 @@
 package com.bellszhu.elasticsearch.plugin.synonym.analysis;
 
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.synonym.SynonymMap;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.env.Environment;
+import org.elasticsearch.index.IndexSettings;
+import org.elasticsearch.index.analysis.*;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -12,31 +22,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.synonym.SynonymMap;
-import org.elasticsearch.common.logging.DeprecationCategory;
-import org.elasticsearch.common.logging.DeprecationLogger;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.env.Environment;
-import org.elasticsearch.index.IndexSettings;
-import org.elasticsearch.index.analysis.AbstractTokenFilterFactory;
-import org.elasticsearch.index.analysis.AnalysisMode;
-import org.elasticsearch.index.analysis.CharFilterFactory;
-import org.elasticsearch.index.analysis.CustomAnalyzer;
-import org.elasticsearch.index.analysis.TokenFilterFactory;
-import org.elasticsearch.index.analysis.TokenizerFactory;
-
 /**
  * @author bellszhu
  */
 public class DynamicSynonymTokenFilterFactory extends
         AbstractTokenFilterFactory {
 
-    private static final DeprecationLogger DEPRECATION_LOGGER = DeprecationLogger.getLogger(
-            DynamicSynonymTokenFilterFactory.class);
+//    private static final DeprecationLogger DEPRECATION_LOGGER = DeprecationLogger.getLogger(
+//            DynamicSynonymTokenFilterFactory.class);
     private static Logger logger = LogManager.getLogger("dynamic-synonym");
 
     /**
@@ -74,12 +67,12 @@ public class DynamicSynonymTokenFilterFactory extends
                     "dynamic synonym requires `synonyms_path` to be configured");
         }
         if (settings.get("ignore_case") != null) {
-            DEPRECATION_LOGGER.deprecate(
-                    DeprecationCategory.ANALYSIS,
-                    "dynamic synonym ignore_case",
-                    "The ignore_case option on the synonym_graph filter is deprecated. " +
-                            "Instead, insert a lowercase filter in the filter chain before the synonym_graph filter."
-            );
+//            DEPRECATION_LOGGER.deprecate(
+//                    DeprecationCategory.ANALYSIS,
+//                    "dynamic synonym ignore_case",
+//                    "The ignore_case option on the synonym_graph filter is deprecated. " +
+//                            "Instead, insert a lowercase filter in the filter chain before the synonym_graph filter."
+//            );
         }
 
         this.interval = settings.getAsInt("interval", 60);
@@ -170,16 +163,19 @@ public class DynamicSynonymTokenFilterFactory extends
     SynonymFile getSynonymFile(Analyzer analyzer) {
         try {
             SynonymFile synonymFile;
-            if (location.startsWith("http://") || location.startsWith("https://")) {
-                synonymFile = new RemoteSynonymFile(
-                        environment, analyzer, expand, lenient,  format, location);
+            if (location.equals(DatabaseRemoteSynonymFile.SYNONYMS_PATH)) {
+                // 从 DB 加载
+                synonymFile = new DatabaseRemoteSynonymFile(environment, analyzer,
+                        expand, lenient, format, location);
+            }else if (location.startsWith("http://") || location.startsWith("https://")) {
+                // 远程文件路径
+                synonymFile = new RemoteSynonymFile(environment, analyzer, expand, lenient,  format, location);
             } else {
-                synonymFile = new LocalSynonymFile(
-                        environment, analyzer, expand, lenient, format, location);
+                // 本地文件路径
+                synonymFile = new LocalSynonymFile(environment, analyzer, expand, lenient, format, location);
             }
             if (scheduledFuture == null) {
-                scheduledFuture = pool.scheduleAtFixedRate(new Monitor(synonymFile),
-                                interval, interval, TimeUnit.SECONDS);
+                scheduledFuture =  pool.scheduleAtFixedRate(new Monitor(synonymFile),interval, interval, TimeUnit.SECONDS);
             }
             return synonymFile;
         } catch (Exception e) {

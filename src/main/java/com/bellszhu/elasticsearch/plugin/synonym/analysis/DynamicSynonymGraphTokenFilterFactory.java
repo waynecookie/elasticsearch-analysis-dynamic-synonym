@@ -50,8 +50,8 @@ public class DynamicSynonymGraphTokenFilterFactory extends DynamicSynonymTokenFi
                 if (synonymMap.fst == null) {
                     return tokenStream;
                 }
-                DynamicSynonymGraphFilter dynamicSynonymGraphFilter = new DynamicSynonymGraphFilter(
-                        tokenStream, synonymMap, false);
+                DynamicSynonymGraphFilter dynamicSynonymGraphFilter =
+                        new DynamicSynonymGraphFilter(tokenStream, synonymMap, false);
                 dynamicSynonymFilters.put(dynamicSynonymGraphFilter, 1);
 
                 return dynamicSynonymGraphFilter;

@@ -5,6 +5,15 @@
         <format>zip</format>
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
+
+    <!--  将配置文件同时进行打包  -->
+    <fileSets>
+        <fileSet>
+            <directory>${project.basedir}/config</directory>
+            <outputDirectory>config</outputDirectory>
+        </fileSet>
+    </fileSets>
+
     <files>
         <file>
             <source>${project.basedir}/src/main/resources/plugin-descriptor.properties</source>
@@ -15,6 +24,7 @@
             <filtered>true</filtered>
         </file>
     </files>
+
     <dependencySets>
         <dependencySet>
             <useProjectArtifact>true</useProjectArtifact>
